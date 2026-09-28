@@ -5,195 +5,287 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>GapMap</title>
     <meta name="description" content="GapMap — find the gaps in any city. Visualise facility density across neighbourhoods: house prices, cafes, clinics, gyms and more." />
-    <link
-      rel="stylesheet"
-      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
     <style>
-      * {
-        margin: 0;
-        padding: 0;
-        box-sizing: border-box;
+      *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+      :root {
+        --bg:        #080b12;
+        --surface:   #0e1120;
+        --surface2:  #151929;
+        --border:    rgba(255,255,255,0.07);
+        --text:      #f0f2ff;
+        --muted:     #6b7280;
+        --accent:    #7c6dfa;
+        --accent-bg: rgba(124,109,250,0.12);
       }
+
       body {
-        font-family: "Segoe UI", sans-serif;
-        background: #0f1117;
-        color: #fff;
+        font-family: 'Inter', 'Segoe UI', sans-serif;
+        background: var(--bg);
+        color: var(--text);
         height: 100vh;
         display: flex;
         flex-direction: column;
+        overflow: hidden;
       }
 
+      /* ── HEADER ─────────────────────────────────────────── */
       header {
-        padding: 14px 20px;
-        background: #1a1d27;
-        border-bottom: 1px solid #2a2d3e;
+        position: relative;
+        z-index: 10;
+        padding: 0 24px;
+        height: 60px;
+        background: rgba(14, 17, 32, 0.92);
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+        border-bottom: 1px solid var(--border);
         display: flex;
         align-items: center;
-        gap: 12px;
-        flex-wrap: wrap;
-      }
-      header h1 {
-        font-size: 18px;
-        font-weight: 700;
-        color: #fff;
-        white-space: nowrap;
-      }
-      header h1 span {
-        color: #6c63ff;
+        gap: 0;
+        flex-shrink: 0;
       }
 
+      /* wordmark */
+      .wordmark {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-right: 24px;
+        flex-shrink: 0;
+        text-decoration: none;
+      }
+      .wordmark-icon {
+        width: 32px;
+        height: 32px;
+        background: linear-gradient(135deg, #7c6dfa, #a855f7);
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 15px;
+        flex-shrink: 0;
+        box-shadow: 0 0 16px rgba(124,109,250,0.35);
+      }
+      .wordmark-text {
+        font-size: 17px;
+        font-weight: 800;
+        letter-spacing: -0.5px;
+        color: var(--text);
+      }
+      .wordmark-text em {
+        font-style: normal;
+        color: var(--accent);
+      }
+
+      /* divider */
+      .header-divider {
+        width: 1px;
+        height: 28px;
+        background: var(--border);
+        margin-right: 20px;
+        flex-shrink: 0;
+      }
+
+      /* filter strip */
       .filters {
         display: flex;
-        gap: 8px;
-        flex-wrap: wrap;
+        gap: 6px;
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        scrollbar-width: none;
         flex: 1;
+        align-items: center;
+        padding: 2px 0;
       }
+      .filters::-webkit-scrollbar { display: none; }
+
       .filter-btn {
-        padding: 7px 16px;
-        border-radius: 20px;
-        border: 2px solid transparent;
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        padding: 6px 14px;
+        border-radius: 999px;
+        border: 1px solid transparent;
         cursor: pointer;
-        font-size: 13px;
+        font-family: inherit;
+        font-size: 12.5px;
         font-weight: 600;
-        transition: all 0.2s;
-        background: #2a2d3e;
-        color: #aaa;
+        white-space: nowrap;
+        transition: background 0.18s, border-color 0.18s, color 0.18s, box-shadow 0.18s, transform 0.12s;
+        background: rgba(255,255,255,0.05);
+        color: var(--muted);
+        outline: none;
+        flex-shrink: 0;
       }
       .filter-btn:hover {
+        background: rgba(255,255,255,0.09);
+        color: #c0c8e8;
         transform: translateY(-1px);
       }
-      .filter-btn.active {
-        color: #fff;
-        border-color: currentColor;
-      }
+      .filter-btn .btn-emoji { font-size: 13px; line-height: 1; }
 
+      /* active states — each layer gets its own accent */
       .filter-btn[data-key="house_price"].active {
-        background: #e74c3c33;
-        color: #e74c3c;
-        border-color: #e74c3c;
+        background: rgba(231,76,60,0.15);
+        color: #ff6b6b;
+        border-color: rgba(231,76,60,0.45);
+        box-shadow: 0 0 12px rgba(231,76,60,0.2);
       }
       .filter-btn[data-key="cafe"].active {
-        background: #e67e2233;
-        color: #e67e22;
-        border-color: #e67e22;
+        background: rgba(230,126,34,0.15);
+        color: #ffab5e;
+        border-color: rgba(230,126,34,0.45);
+        box-shadow: 0 0 12px rgba(230,126,34,0.2);
       }
       .filter-btn[data-key="laundry"].active {
-        background: #3498db33;
-        color: #3498db;
-        border-color: #3498db;
+        background: rgba(52,152,219,0.15);
+        color: #74c0fc;
+        border-color: rgba(52,152,219,0.45);
+        box-shadow: 0 0 12px rgba(52,152,219,0.2);
       }
       .filter-btn[data-key="mamak"].active {
-        background: #2ecc7133;
-        color: #2ecc71;
-        border-color: #2ecc71;
+        background: rgba(46,204,113,0.15);
+        color: #69db7c;
+        border-color: rgba(46,204,113,0.45);
+        box-shadow: 0 0 12px rgba(46,204,113,0.2);
       }
       .filter-btn[data-key="clinic"].active {
-        background: #9b59b633;
-        color: #9b59b6;
-        border-color: #9b59b6;
+        background: rgba(155,89,182,0.15);
+        color: #cc99ff;
+        border-color: rgba(155,89,182,0.45);
+        box-shadow: 0 0 12px rgba(155,89,182,0.2);
       }
       .filter-btn[data-key="gym"].active {
-        background: #f39c1233;
-        color: #f39c12;
-        border-color: #f39c12;
+        background: rgba(243,156,18,0.15);
+        color: #ffd43b;
+        border-color: rgba(243,156,18,0.45);
+        box-shadow: 0 0 12px rgba(243,156,18,0.2);
       }
       .filter-btn[data-key="convenience"].active {
-        background: #1abc9c33;
-        color: #1abc9c;
-        border-color: #1abc9c;
+        background: rgba(26,188,156,0.15);
+        color: #63e6be;
+        border-color: rgba(26,188,156,0.45);
+        box-shadow: 0 0 12px rgba(26,188,156,0.2);
       }
 
-      #map {
-        flex: 1;
-        width: 100%;
-      }
+      /* ── MAP ──────────────────────────────────────────────── */
+      #map { flex: 1; width: 100%; }
 
+      /* ── LEGEND ───────────────────────────────────────────── */
       .legend {
         position: absolute;
-        bottom: 30px;
+        bottom: 28px;
         right: 16px;
-        background: #1a1d27ee;
-        border: 1px solid #2a2d3e;
-        border-radius: 10px;
-        padding: 12px 16px;
+        background: rgba(14, 17, 32, 0.88);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 14px 16px;
         z-index: 1000;
-        font-size: 12px;
-        min-width: 160px;
+        font-size: 11.5px;
+        min-width: 170px;
       }
       .legend h4 {
-        font-size: 13px;
-        margin-bottom: 8px;
-        color: #fff;
+        font-size: 12px;
+        font-weight: 700;
+        margin-bottom: 10px;
+        color: var(--text);
+        letter-spacing: 0.2px;
       }
       .legend-bar {
         width: 100%;
-        height: 12px;
-        border-radius: 6px;
-        background: linear-gradient(
-          to right,
-          #0000ff80,
-          #00ff0080,
-          #ffff0080,
-          #ff000080
-        );
-        margin-bottom: 6px;
+        height: 8px;
+        border-radius: 999px;
+        background: linear-gradient(to right, #3b82f680, #22d3ee80, #a3e63580, #facc1580, #f9731680);
+        margin-bottom: 7px;
       }
       .legend-labels {
         display: flex;
         justify-content: space-between;
-        color: #aaa;
+        color: var(--muted);
+        font-size: 11px;
       }
 
+      /* ── INFO PANEL ───────────────────────────────────────── */
       .info-panel {
         position: absolute;
-        top: 80px;
+        top: 76px;
         left: 16px;
-        background: #1a1d27ee;
-        border: 1px solid #2a2d3e;
-        border-radius: 10px;
-        padding: 12px 16px;
+        background: rgba(14, 17, 32, 0.88);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 14px 16px;
         z-index: 1000;
         font-size: 12px;
-        max-width: 220px;
+        max-width: 210px;
       }
       .info-panel h4 {
-        font-size: 13px;
-        color: #6c63ff;
-        margin-bottom: 6px;
+        font-size: 12px;
+        font-weight: 700;
+        color: var(--accent);
+        margin-bottom: 7px;
+        letter-spacing: 0.2px;
       }
       .info-panel p {
-        color: #ccc;
-        line-height: 1.6;
+        color: #8b95b3;
+        line-height: 1.65;
       }
+      .info-panel .hint-row {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        margin-top: 8px;
+        font-size: 11.5px;
+        color: #8b95b3;
+      }
+      .dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        flex-shrink: 0;
+      }
+      .dot-hot  { background: #f97316; box-shadow: 0 0 6px #f97316aa; }
+      .dot-cold { background: #3b82f6; box-shadow: 0 0 6px #3b82f6aa; }
       .info-panel .badge {
-        display: inline-block;
-        padding: 2px 8px;
-        border-radius: 10px;
-        background: #6c63ff33;
-        color: #6c63ff;
-        margin-top: 4px;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 3px 10px;
+        border-radius: 999px;
+        background: var(--accent-bg);
+        border: 1px solid rgba(124,109,250,0.25);
+        color: var(--accent);
+        margin-top: 10px;
+        font-size: 11px;
         font-weight: 600;
+        letter-spacing: 0.3px;
       }
     </style>
   </head>
   <body>
     <header>
-      <h1>🗺️ Gap<span>Map</span></h1>
+      <a class="wordmark" href="#">
+        <div class="wordmark-icon">🗺️</div>
+        <span class="wordmark-text">Gap<em>Map</em></span>
+      </a>
+      <div class="header-divider"></div>
       <div class="filters">
-        <button class="filter-btn active" data-key="house_price">
-          🏠 House Price
-        </button>
-        <button class="filter-btn" data-key="cafe">☕ Cafes</button>
-        <button class="filter-btn" data-key="laundry">👕 Laundry</button>
-        <button class="filter-btn" data-key="mamak">🍜 Mamak</button>
-        <button class="filter-btn" data-key="clinic">🏥 Clinic</button>
-        <button class="filter-btn" data-key="gym">💪 Gym</button>
-        <button class="filter-btn" data-key="convenience">
-          🏪 Convenience
-        </button>
+        <button class="filter-btn active" data-key="house_price"><span class="btn-emoji">🏠</span> House Price</button>
+        <button class="filter-btn" data-key="cafe"><span class="btn-emoji">☕</span> Cafes</button>
+        <button class="filter-btn" data-key="laundry"><span class="btn-emoji">👕</span> Laundry</button>
+        <button class="filter-btn" data-key="mamak"><span class="btn-emoji">🍜</span> Street Food</button>
+        <button class="filter-btn" data-key="clinic"><span class="btn-emoji">🏥</span> Clinics</button>
+        <button class="filter-btn" data-key="gym"><span class="btn-emoji">💪</span> Gyms</button>
+        <button class="filter-btn" data-key="convenience"><span class="btn-emoji">🏪</span> Convenience</button>
       </div>
     </header>
 
@@ -207,11 +299,10 @@
 
     <div class="info-panel">
       <h4>💡 How to use</h4>
-      <p>Select a facility filter to see its density across the city.</p>
-      <p style="margin-top: 6px">
-        🔴 <b>Hot</b> = High density<br />🔵 <b>Cool</b> = Low / missing
-      </p>
-      <div class="badge">Hackathon Demo</div>
+      <p>Pick a layer to see facility density across the city.</p>
+      <div class="hint-row"><div class="dot dot-hot"></div> <span><b>Hot</b> = high density</span></div>
+      <div class="hint-row"><div class="dot dot-cold"></div> <span><b>Cool</b> = gap / missing</span></div>
+      <div class="badge">✦ Hackathon Demo</div>
     </div>
 
     <script>
