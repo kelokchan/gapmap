@@ -69,10 +69,10 @@ The **cool blue zones** on each layer are the interesting ones — they show whe
 
 - **[Leaflet.js](https://leafletjs.com/)** `v1.9.4` — map rendering
 - **[leaflet-heat](https://github.com/Leaflet/Leaflet.heat)** `v0.2.0` — heatmap layer
-- **[OpenStreetMap](https://www.openstreetmap.org/)** — base tile layer
+- **[Esri World Dark Gray](https://www.arcgis.com/home/item.html?id=358ec1e175ea41c3bf5c68f0da11ae2b)** — base tile layer (no API key)
 - Vanilla HTML/CSS/JS — zero dependencies to install
 
-The dark map aesthetic is achieved with a CSS `invert + hue-rotate` filter on the tile layer, with a counter-invert on the overlay panes so the heatmap colours stay accurate.
+The dark map comes straight from Esri's dark gray basemap, so the heatmap colours render as-is.
 
 ---
 
