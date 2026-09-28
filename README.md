@@ -1,4 +1,4 @@
-# 🗺️ Facility Heatmap
+# 🗺️ GapMap
 
 **Find the gaps, anywhere.** Flip between seven layers — house prices, cafes, laundry, street food, clinics, gyms, convenience stores — and see which neighbourhoods are packed and which are underserved. The cold spots are the point: they show where a new business or public service could land.
 
@@ -34,8 +34,8 @@ No build step, no npm install, no server. Just open the file:
 
 ```bash
 # Clone the repo
-git clone https://github.com/kelokchan/kl-facility-heatmap.git
-cd kl-facility-heatmap
+git clone https://github.com/kelokchan/gapmap.git
+cd gapmap
 
 # Open in your browser
 open index.html        # macOS
@@ -110,7 +110,7 @@ To plug in real data, replace the `data` object entries with actual coordinates 
 ## Folder structure
 
 ```
-kl-facility-heatmap/
+gapmap/
 └── index.html     # Everything — map, styles, data, and logic in one file
 ```
 
