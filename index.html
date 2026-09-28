@@ -4,319 +4,476 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>GapMap</title>
-    <meta name="description" content="GapMap — find the gaps in any city. Visualise facility density across neighbourhoods: house prices, cafes, clinics, gyms and more." />
+    <meta
+      name="description"
+      content="GapMap — find the gaps in any city. Visualise facility density across neighbourhoods: house prices, cafes, clinics, gyms and more."
+    />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
     <style>
-      *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+      *,
+      *::before,
+      *::after {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
 
       :root {
-        --bg:        #080b12;
-        --surface:   #0e1120;
-        --surface2:  #151929;
-        --border:    rgba(255,255,255,0.07);
-        --text:      #f0f2ff;
-        --muted:     #6b7280;
-        --accent:    #7c6dfa;
-        --accent-bg: rgba(124,109,250,0.12);
+        --paper: #ffd400;
+        --ink: #141414;
+        --ink-2: #4a3d00;
+        --rule: #141414;
+        --red: #d22318;
+        --newsprint: #e2e4e3;
+        --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+        --sheet-w: 360px;
       }
 
+      html,
       body {
-        font-family: 'Inter', 'Segoe UI', sans-serif;
-        background: var(--bg);
-        color: var(--text);
-        height: 100vh;
+        height: 100%;
+      }
+      body {
+        font-family: "Archivo", system-ui, sans-serif;
+        background: var(--newsprint);
+        color: var(--ink);
+        display: grid;
+        grid-template-columns: var(--sheet-w) 1fr;
+        overflow: hidden;
+        -webkit-font-smoothing: antialiased;
+      }
+      ::selection {
+        background: var(--ink);
+        color: var(--paper);
+      }
+      :focus-visible {
+        outline: 3px solid var(--ink);
+        outline-offset: 2px;
+      }
+      button {
+        font: inherit;
+        color: inherit;
+        background: none;
+        border: 0;
+        cursor: pointer;
+      }
+
+      /* ── DIRECTORY SHEET ─────────────────────────────── */
+      .sheet {
+        position: relative;
+        z-index: 1000;
+        background: var(--paper);
+        border-right: 3px solid var(--rule);
+        min-height: 0;
+      }
+      .page {
+        height: 100%;
+        overflow-y: auto;
+        padding: 28px 28px 24px;
         display: flex;
         flex-direction: column;
-        overflow: hidden;
+        scrollbar-width: thin;
+        scrollbar-color: var(--ink) transparent;
       }
 
-      /* ── HEADER ─────────────────────────────────────────── */
-      header {
-        position: relative;
-        z-index: 10;
-        padding: 0 24px;
-        height: 60px;
-        background: rgba(14, 17, 32, 0.92);
-        backdrop-filter: blur(16px);
-        -webkit-backdrop-filter: blur(16px);
-        border-bottom: 1px solid var(--border);
-        display: flex;
-        align-items: center;
-        gap: 0;
-        flex-shrink: 0;
+      .masthead {
+        border-bottom: 6px solid var(--rule);
+        padding-bottom: 10px;
       }
-
-      /* wordmark */
-      .wordmark {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        margin-right: 24px;
-        flex-shrink: 0;
-        text-decoration: none;
+      .masthead h1 {
+        font-size: 64px;
+        font-weight: 900;
+        font-stretch: 62%;
+        line-height: 0.86;
+        letter-spacing: -0.02em;
       }
-      .wordmark-icon {
-        width: 32px;
-        height: 32px;
-        background: linear-gradient(135deg, #7c6dfa, #a855f7);
-        border-radius: 8px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 15px;
-        flex-shrink: 0;
-        box-shadow: 0 0 16px rgba(124,109,250,0.35);
-      }
-      .wordmark-text {
-        font-size: 17px;
-        font-weight: 800;
-        letter-spacing: -0.5px;
-        color: var(--text);
-      }
-      .wordmark-text em {
-        font-style: normal;
-        color: var(--accent);
-      }
-
-      /* divider */
-      .header-divider {
-        width: 1px;
-        height: 28px;
-        background: var(--border);
-        margin-right: 20px;
-        flex-shrink: 0;
-      }
-
-      /* filter strip */
-      .filters {
-        display: flex;
-        gap: 6px;
-        flex-wrap: nowrap;
-        overflow-x: auto;
-        scrollbar-width: none;
-        flex: 1;
-        align-items: center;
-        padding: 2px 0;
-      }
-      .filters::-webkit-scrollbar { display: none; }
-
-      .filter-btn {
-        display: flex;
-        align-items: center;
-        gap: 5px;
-        padding: 6px 14px;
-        border-radius: 999px;
-        border: 1px solid transparent;
-        cursor: pointer;
-        font-family: inherit;
-        font-size: 12.5px;
+      .masthead p {
+        margin-top: 8px;
+        font-size: 13px;
         font-weight: 600;
-        white-space: nowrap;
-        transition: background 0.18s, border-color 0.18s, color 0.18s, box-shadow 0.18s, transform 0.12s;
-        background: rgba(255,255,255,0.05);
-        color: var(--muted);
-        outline: none;
-        flex-shrink: 0;
-      }
-      .filter-btn:hover {
-        background: rgba(255,255,255,0.09);
-        color: #c0c8e8;
-        transform: translateY(-1px);
-      }
-      .filter-btn .btn-emoji { font-size: 13px; line-height: 1; }
-
-      /* active states — each layer gets its own accent */
-      .filter-btn[data-key="house_price"].active {
-        background: rgba(231,76,60,0.15);
-        color: #ff6b6b;
-        border-color: rgba(231,76,60,0.45);
-        box-shadow: 0 0 12px rgba(231,76,60,0.2);
-      }
-      .filter-btn[data-key="cafe"].active {
-        background: rgba(230,126,34,0.15);
-        color: #ffab5e;
-        border-color: rgba(230,126,34,0.45);
-        box-shadow: 0 0 12px rgba(230,126,34,0.2);
-      }
-      .filter-btn[data-key="laundry"].active {
-        background: rgba(52,152,219,0.15);
-        color: #74c0fc;
-        border-color: rgba(52,152,219,0.45);
-        box-shadow: 0 0 12px rgba(52,152,219,0.2);
-      }
-      .filter-btn[data-key="mamak"].active {
-        background: rgba(46,204,113,0.15);
-        color: #69db7c;
-        border-color: rgba(46,204,113,0.45);
-        box-shadow: 0 0 12px rgba(46,204,113,0.2);
-      }
-      .filter-btn[data-key="clinic"].active {
-        background: rgba(155,89,182,0.15);
-        color: #cc99ff;
-        border-color: rgba(155,89,182,0.45);
-        box-shadow: 0 0 12px rgba(155,89,182,0.2);
-      }
-      .filter-btn[data-key="gym"].active {
-        background: rgba(243,156,18,0.15);
-        color: #ffd43b;
-        border-color: rgba(243,156,18,0.45);
-        box-shadow: 0 0 12px rgba(243,156,18,0.2);
-      }
-      .filter-btn[data-key="convenience"].active {
-        background: rgba(26,188,156,0.15);
-        color: #63e6be;
-        border-color: rgba(26,188,156,0.45);
-        box-shadow: 0 0 12px rgba(26,188,156,0.2);
-      }
-
-      /* ── MAP ──────────────────────────────────────────────── */
-      #map { flex: 1; width: 100%; }
-
-      /* ── LEGEND ───────────────────────────────────────────── */
-      .legend {
-        position: absolute;
-        bottom: 28px;
-        right: 16px;
-        background: rgba(14, 17, 32, 0.88);
-        backdrop-filter: blur(12px);
-        -webkit-backdrop-filter: blur(12px);
-        border: 1px solid var(--border);
-        border-radius: 12px;
-        padding: 14px 16px;
-        z-index: 1000;
-        font-size: 11.5px;
-        min-width: 170px;
-      }
-      .legend h4 {
-        font-size: 12px;
-        font-weight: 700;
-        margin-bottom: 10px;
-        color: var(--text);
-        letter-spacing: 0.2px;
-      }
-      .legend-bar {
-        width: 100%;
-        height: 8px;
-        border-radius: 999px;
-        background: linear-gradient(to right, #3b82f680, #22d3ee80, #a3e63580, #facc1580, #f9731680);
-        margin-bottom: 7px;
-      }
-      .legend-labels {
+        font-stretch: 87%;
         display: flex;
         justify-content: space-between;
-        color: var(--muted);
-        font-size: 11px;
+        gap: 12px;
+      }
+      .hint {
+        margin-top: 14px;
+        font-size: 14px;
+        line-height: 1.45;
+        color: var(--ink-2);
+        max-width: 34ch;
       }
 
-      /* ── INFO PANEL ───────────────────────────────────────── */
-      .info-panel {
-        position: absolute;
-        top: 76px;
-        left: 16px;
-        background: rgba(14, 17, 32, 0.88);
-        backdrop-filter: blur(12px);
-        -webkit-backdrop-filter: blur(12px);
-        border: 1px solid var(--border);
-        border-radius: 12px;
-        padding: 14px 16px;
-        z-index: 1000;
-        font-size: 12px;
-        max-width: 210px;
+      .cat {
+        margin-top: 28px;
+        background: var(--ink);
+        color: var(--paper);
+        padding: 8px 12px 6px;
+        font-size: 30px;
+        font-weight: 850;
+        font-stretch: 70%;
+        text-transform: uppercase;
+        letter-spacing: 0.01em;
+        line-height: 1;
       }
-      .info-panel h4 {
+
+      .list-title {
+        margin-top: 22px;
+        padding-bottom: 6px;
+        border-bottom: 2px solid var(--rule);
+        font-size: 13px;
+        font-weight: 800;
+        font-stretch: 80%;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        display: flex;
+        justify-content: space-between;
+      }
+      .list-title small {
+        font-size: inherit;
+        font-weight: 600;
+        color: var(--ink-2);
+      }
+
+      .entries {
+        list-style: none;
+      }
+      .entry {
+        width: 100%;
+        display: flex;
+        align-items: baseline;
+        gap: 8px;
+        padding: 9px 0 7px;
+        border-bottom: 1px solid color-mix(in srgb, var(--ink) 25%, transparent);
+        text-align: left;
+        font-size: 16px;
+        font-weight: 650;
+        font-stretch: 90%;
+        transition: padding 0.2s var(--ease-out);
+      }
+      .entry:hover {
+        padding-left: 6px;
+      }
+      .entry .leader {
+        flex: 1;
+        border-bottom: 2px dotted var(--ink);
+        transform: translateY(-4px);
+        min-width: 16px;
+      }
+      .entry .val {
+        font-variant-numeric: tabular-nums;
+        font-weight: 800;
+      }
+      .entry .rank {
+        flex: none;
+        width: 22px;
+        height: 22px;
+        display: grid;
+        place-items: center;
+        border: 2px solid var(--red);
+        border-radius: 50%;
+        color: var(--red);
+        font-size: 12px;
+        font-weight: 800;
+        transform: translateY(-1px);
+      }
+      .entries.crowded .entry {
+        font-weight: 500;
+      }
+
+      .foot {
+        margin-top: auto;
+        padding-top: 28px;
+      }
+      .ink-scale {
+        height: 12px;
+        border: 2px solid var(--rule);
+      }
+      .ink-labels {
+        display: flex;
+        justify-content: space-between;
+        margin-top: 6px;
         font-size: 12px;
         font-weight: 700;
-        color: var(--accent);
-        margin-bottom: 7px;
-        letter-spacing: 0.2px;
+        font-stretch: 85%;
       }
-      .info-panel p {
-        color: #8b95b3;
-        line-height: 1.65;
+      .foot p {
+        margin-top: 12px;
+        font-size: 12px;
+        line-height: 1.45;
+        color: var(--ink-2);
       }
-      .info-panel .hint-row {
+
+      /* ── THUMB-INDEX TABS ────────────────────────────── */
+      .tabs {
+        position: absolute;
+        left: 100%;
+        top: 28px;
+        margin-left: 3px;
         display: flex;
-        align-items: center;
-        gap: 6px;
-        margin-top: 8px;
-        font-size: 11.5px;
-        color: #8b95b3;
-      }
-      .dot {
-        width: 8px;
-        height: 8px;
-        border-radius: 50%;
-        flex-shrink: 0;
-      }
-      .dot-hot  { background: #f97316; box-shadow: 0 0 6px #f97316aa; }
-      .dot-cold { background: #3b82f6; box-shadow: 0 0 6px #3b82f6aa; }
-      .info-panel .badge {
-        display: inline-flex;
-        align-items: center;
+        flex-direction: column;
+        align-items: flex-start;
         gap: 4px;
-        padding: 3px 10px;
-        border-radius: 999px;
-        background: var(--accent-bg);
-        border: 1px solid rgba(124,109,250,0.25);
-        color: var(--accent);
-        margin-top: 10px;
+      }
+      .tab {
+        width: 118px;
+        height: 40px;
+        padding: 0 14px;
+        text-align: left;
+        background: var(--paper);
+        border: 2px solid var(--rule);
+        border-left: 0;
+        border-radius: 0 10px 10px 0;
+        font-size: 15px;
+        font-weight: 750;
+        font-stretch: 80%;
+        box-shadow: 0 3px 8px rgb(0 0 0 / 0.18);
+        transition:
+          width 0.25s var(--ease-out),
+          background 0.15s,
+          color 0.15s;
+      }
+      .tab:hover {
+        width: 128px;
+      }
+      .tab[aria-pressed="true"] {
+        width: 138px;
+        background: var(--ink);
+        color: var(--paper);
+      }
+
+      /* ── MAP ─────────────────────────────────────────── */
+      /* explicit position so Leaflet doesn't pin an inline one that beats the phone layout */
+      #map {
+        position: relative;
+        height: 100%;
+        background: var(--newsprint);
+        font-family: inherit;
+      }
+      .leaflet-heatmap-layer {
+        opacity: 0.85;
+      }
+      .leaflet-tile-pane {
+        filter: grayscale(1) contrast(1.08);
+      }
+      .leaflet-bar {
+        border: 2px solid var(--rule) !important;
+        border-radius: 0 !important;
+        box-shadow: none !important;
+      }
+      .leaflet-bar a {
+        background: var(--paper) !important;
+        color: var(--ink) !important;
+        border-radius: 0 !important;
+        border-bottom-color: var(--ink) !important;
+        font-weight: 800;
+      }
+      .leaflet-bar a:hover {
+        background: var(--ink) !important;
+        color: var(--paper) !important;
+      }
+      .leaflet-control-attribution {
+        background: rgb(226 228 227 / 0.85) !important;
+        font-size: 10px;
+      }
+      .leaflet-control-attribution a {
+        color: var(--ink) !important;
+      }
+
+      .area-label span {
+        position: absolute;
+        transform: translate(-50%, -50%);
+        white-space: nowrap;
+        font-size: 11.5px;
+        font-weight: 700;
+        font-stretch: 80%;
+        color: var(--ink);
+        text-shadow:
+          0 0 2px #fff,
+          0 0 4px #fff,
+          0 0 6px #fff;
+        pointer-events: none;
+      }
+
+      .ring {
+        pointer-events: none;
+      }
+      .ring svg {
+        position: absolute;
+        left: -60px;
+        top: -24px;
+        width: 120px;
+        height: 48px;
+        overflow: visible;
+      }
+      .ring path {
+        fill: none;
+        stroke: var(--red);
+        stroke-width: 2.5;
+        stroke-linecap: round;
+        stroke-dasharray: 1;
+        stroke-dashoffset: 1;
+        animation: draw 0.7s var(--ease-out) forwards;
+        animation-delay: calc(var(--i) * 90ms);
+      }
+      .ring b {
+        position: absolute;
+        left: -66px;
+        top: -34px;
+        width: 20px;
+        height: 20px;
+        display: grid;
+        place-items: center;
+        border-radius: 50%;
+        background: var(--red);
+        color: #fff;
         font-size: 11px;
-        font-weight: 600;
-        letter-spacing: 0.3px;
+        font-weight: 800;
+      }
+      @keyframes draw {
+        to {
+          stroke-dashoffset: 0;
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .ring path {
+          animation: none;
+          stroke-dashoffset: 0;
+        }
+        .tab,
+        .entry {
+          transition: none;
+        }
+      }
+
+      /* ── PHONE: sheet docks to the bottom, tabs sit on its top edge ── */
+      @media (max-width: 760px) {
+        body {
+          display: block;
+        }
+        #map {
+          position: fixed;
+          inset: 0 0 46dvh 0;
+          height: auto;
+        }
+        .sheet {
+          position: fixed;
+          inset: auto 0 0 0;
+          height: 46dvh;
+          border-right: 0;
+          border-top: 3px solid var(--rule);
+        }
+        .page {
+          padding: 18px 16px 20px;
+        }
+        .masthead h1 {
+          font-size: 44px;
+        }
+        .cat {
+          margin-top: 18px;
+          font-size: 24px;
+        }
+        .tabs {
+          left: 0;
+          right: 0;
+          top: auto;
+          bottom: 100%;
+          margin: 0 0 3px;
+          padding: 0 16px;
+          flex-direction: row;
+          align-items: flex-end;
+          overflow-x: auto;
+          scrollbar-width: none;
+        }
+        .tabs::-webkit-scrollbar {
+          display: none;
+        }
+        .tab,
+        .tab:hover {
+          flex: none;
+          width: auto;
+          height: 38px;
+          padding: 0 12px;
+          border: 2px solid var(--rule);
+          border-bottom: 0;
+          border-radius: 10px 10px 0 0;
+          box-shadow: none;
+          transition: height 0.25s var(--ease-out);
+        }
+        .tab[aria-pressed="true"] {
+          width: auto;
+          height: 46px;
+        }
       }
     </style>
   </head>
   <body>
-    <header>
-      <a class="wordmark" href="#">
-        <div class="wordmark-icon">🗺️</div>
-        <span class="wordmark-text">Gap<em>Map</em></span>
-      </a>
-      <div class="header-divider"></div>
-      <div class="filters">
-        <button class="filter-btn active" data-key="house_price"><span class="btn-emoji">🏠</span> House Price</button>
-        <button class="filter-btn" data-key="cafe"><span class="btn-emoji">☕</span> Cafes</button>
-        <button class="filter-btn" data-key="laundry"><span class="btn-emoji">👕</span> Laundry</button>
-        <button class="filter-btn" data-key="mamak"><span class="btn-emoji">🍜</span> Street Food</button>
-        <button class="filter-btn" data-key="clinic"><span class="btn-emoji">🏥</span> Clinics</button>
-        <button class="filter-btn" data-key="gym"><span class="btn-emoji">💪</span> Gyms</button>
-        <button class="filter-btn" data-key="convenience"><span class="btn-emoji">🏪</span> Convenience</button>
+    <aside class="sheet">
+      <nav class="tabs" aria-label="Category" id="tabs"></nav>
+      <div class="page">
+        <header class="masthead">
+          <h1>GapMap</h1>
+          <p>
+            <span>Kuala Lumpur &amp; Klang Valley</span><span>28 areas</span>
+          </p>
+        </header>
+        <p class="hint">
+          Pick a category from the tabs. Red rings mark the five areas with the
+          thinnest coverage; tap a listing to fly there.
+        </p>
+
+        <h2 class="cat" id="cat-title"></h2>
+
+        <h3 class="list-title">
+          <span id="low-title"></span><small>index</small>
+        </h3>
+        <ol class="entries" id="low-list"></ol>
+
+        <h3 class="list-title">
+          <span id="high-title"></span><small>index</small>
+        </h3>
+        <ol class="entries crowded" id="high-list"></ol>
+
+        <footer class="foot">
+          <div
+            class="ink-scale"
+            role="img"
+            aria-label="Density scale from bare to hot"
+          ></div>
+          <div class="ink-labels">
+            <span>Bare = gap</span><span>Hot = crowded</span>
+          </div>
+          <p>
+            Index 0–100, relative within each category. Hackathon demo: data is
+            simulated around real KL landmarks.
+          </p>
+        </footer>
       </div>
-    </header>
+    </aside>
 
     <div id="map"></div>
-
-    <div class="legend">
-      <h4 id="legend-title">🏠 House Price Density</h4>
-      <div class="legend-bar"></div>
-      <div class="legend-labels"><span>Low</span><span>High</span></div>
-    </div>
-
-    <div class="info-panel">
-      <h4>💡 How to use</h4>
-      <p>Pick a layer to see facility density across the city.</p>
-      <div class="hint-row"><div class="dot dot-hot"></div> <span><b>Hot</b> = high density</span></div>
-      <div class="hint-row"><div class="dot dot-cold"></div> <span><b>Cool</b> = gap / missing</span></div>
-      <div class="badge">✦ Hackathon Demo</div>
-    </div>
 
     <script>
       // ──────────────────────────────────────────
       // MAP INIT
       // ──────────────────────────────────────────
-      const map = L.map("map", { zoomControl: true }).setView(
-        [3.139, 101.6869],
-        12,
-      );
+      const map = L.map("map", { zoomControl: false });
+      L.control.zoom({ position: "topright" }).addTo(map);
 
-      // Esri dark basemap: no API key, no Referer needed (OSM blocks file:// opens with "Access blocked")
+      // Esri light basemap: no API key, no Referer needed (OSM blocks file:// opens with "Access blocked")
       L.tileLayer(
-        "https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}",
+        "https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}",
         {
           attribution:
             "Tiles &copy; Esri &mdash; Esri, HERE, Garmin, &copy; OpenStreetMap contributors",
@@ -325,449 +482,408 @@
       ).addTo(map);
 
       // ──────────────────────────────────────────
-      // DATA GENERATOR
-      // Clusters of points around area landmarks
+      // AREAS — KL + Klang Valley: [lat, lng, label]
       // ──────────────────────────────────────────
-      function jitter(lat, lng, n, spread, intensity) {
-        const pts = [];
-        for (let i = 0; i < n; i++) {
-          pts.push([
-            lat + (Math.random() - 0.5) * spread,
-            lng + (Math.random() - 0.5) * spread,
-            intensity * (0.5 + Math.random() * 0.5),
-          ]);
-        }
-        return pts;
-      }
-
-      // Area centres — KL + Klang Valley: [lat, lng]
       const areas = {
         // ── City core ──
-        klcc:           [3.1578,  101.7119],
-        bukit_bintang:  [3.1466,  101.7100],
-        chow_kit:       [3.1659,  101.6986],
-        brickfields:    [3.1316,  101.6862],
-        masjid_india:   [3.1490,  101.6940],
+        klcc: [3.1578, 101.7119, "KLCC"],
+        bukit_bintang: [3.1466, 101.71, "Bukit Bintang"],
+        chow_kit: [3.1659, 101.6986, "Chow Kit"],
+        brickfields: [3.1316, 101.6862, "Brickfields"],
+        masjid_india: [3.149, 101.694, "Masjid India"],
         // ── South KL ──
-        mid_valley:     [3.1178,  101.6774],
-        bangsar:        [3.1299,  101.6778],
-        bangsar_south:  [3.1080,  101.6640],
-        kl_eco_city:    [3.1140,  101.6800],
-        sri_petaling:   [3.0850,  101.6900],
+        mid_valley: [3.1178, 101.6774, "Mid Valley"],
+        bangsar: [3.1299, 101.6778, "Bangsar"],
+        bangsar_south: [3.108, 101.664, "Bangsar South"],
+        kl_eco_city: [3.114, 101.68, "KL Eco City"],
+        sri_petaling: [3.085, 101.69, "Sri Petaling"],
         // ── North KL ──
-        mont_kiara:     [3.1728,  101.6536],
-        hartamas:       [3.1620,  101.6513],
-        desa_park:      [3.1335,  101.6564],
-        kepong:         [3.2100,  101.6330],
-        segambut:       [3.1870,  101.6700],
+        mont_kiara: [3.1728, 101.6536, "Mont Kiara"],
+        hartamas: [3.162, 101.6513, "Hartamas"],
+        desa_park: [3.1335, 101.6564, "Desa Park"],
+        kepong: [3.21, 101.633, "Kepong"],
+        segambut: [3.187, 101.67, "Segambut"],
         // ── East KL ──
-        wangsa_maju:    [3.1927,  101.7388],
-        setapak:        [3.2020,  101.7102],
-        ampang:         [3.1500,  101.7550],
-        pandan_indah:   [3.1100,  101.7500],
-        cheras:         [3.0790,  101.7380],
+        wangsa_maju: [3.1927, 101.7388, "Wangsa Maju"],
+        setapak: [3.202, 101.7102, "Setapak"],
+        ampang: [3.15, 101.755, "Ampang"],
+        pandan_indah: [3.11, 101.75, "Pandan Indah"],
+        cheras: [3.079, 101.738, "Cheras"],
         // ── West / PJ ──
-        ttdi:           [3.1402,  101.6304],
-        pj_ss2:         [3.1099,  101.6244],
-        pj_damansara:   [3.1350,  101.6150],
-        subang_jaya:    [3.0500,  101.5800],
-        usj:            [3.0480,  101.5600],
+        ttdi: [3.1402, 101.6304, "TTDI"],
+        pj_ss2: [3.1099, 101.6244, "PJ SS2"],
+        pj_damansara: [3.135, 101.615, "PJ Damansara"],
+        subang_jaya: [3.05, 101.58, "Subang Jaya"],
+        usj: [3.048, 101.56, "USJ"],
         // ── South ──
-        puchong:        [3.0299,  101.6218],
-        bukit_jalil:    [3.0580,  101.6900],
-        seri_kembangan: [3.0230,  101.7080],
+        puchong: [3.0299, 101.6218, "Puchong"],
+        bukit_jalil: [3.058, 101.69, "Bukit Jalil"],
+        seri_kembangan: [3.023, 101.708, "Seri Kembangan"],
       };
 
-      // Each facility: dense areas first, then thinning areas (gaps = opportunity)
-      const data = {
-        // ── House Price ──────────────────────────────────────────────────────
+      // ──────────────────────────────────────────
+      // LAYERS — each spot: [area, points, spread, intensity]
+      // Dense areas first, then thinning areas (gaps = opportunity)
+      // ──────────────────────────────────────────
+      const layers = {
         // Luxury corridor: KLCC → Mont Kiara → Bangsar → Damansara
-        house_price: [
-          ...jitter(...areas.klcc,           100, 0.025, 1.00),
-          ...jitter(...areas.mont_kiara,       90, 0.030, 0.95),
-          ...jitter(...areas.bukit_bintang,    75, 0.020, 0.90),
-          ...jitter(...areas.bangsar,          70, 0.022, 0.88),
-          ...jitter(...areas.hartamas,         60, 0.022, 0.82),
-          ...jitter(...areas.kl_eco_city,      55, 0.018, 0.80),
-          ...jitter(...areas.bangsar_south,    50, 0.020, 0.78),
-          ...jitter(...areas.ttdi,             55, 0.020, 0.75),
-          ...jitter(...areas.pj_damansara,     50, 0.022, 0.72),
-          ...jitter(...areas.desa_park,        45, 0.018, 0.70),
-          ...jitter(...areas.bukit_jalil,      40, 0.025, 0.65),
-          // Mid tier
-          ...jitter(...areas.ampang,           45, 0.025, 0.65),
-          ...jitter(...areas.mid_valley,       40, 0.018, 0.62),
-          ...jitter(...areas.chow_kit,         35, 0.015, 0.60),
-          ...jitter(...areas.subang_jaya,      35, 0.028, 0.58),
-          ...jitter(...areas.wangsa_maju,      30, 0.025, 0.55),
-          ...jitter(...areas.brickfields,      30, 0.015, 0.55),
-          ...jitter(...areas.pandan_indah,     25, 0.022, 0.50),
-          // Affordable
-          ...jitter(...areas.kepong,           20, 0.030, 0.42),
-          ...jitter(...areas.setapak,          20, 0.025, 0.45),
-          ...jitter(...areas.segambut,         18, 0.020, 0.40),
-          ...jitter(...areas.sri_petaling,     15, 0.020, 0.38),
-          ...jitter(...areas.puchong,          15, 0.030, 0.35),
-          ...jitter(...areas.cheras,           15, 0.025, 0.38),
-          ...jitter(...areas.usj,              12, 0.025, 0.33),
-          ...jitter(...areas.seri_kembangan,   10, 0.025, 0.30),
-        ],
-
-        // ── Cafes ────────────────────────────────────────────────────────────
-        // Cafe culture hotspots: BB, Bangsar, TTDI, Mont Kiara, Hartamas
-        cafe: [
-          ...jitter(...areas.bukit_bintang,   100, 0.018, 1.00),
-          ...jitter(...areas.bangsar,          90, 0.020, 0.95),
-          ...jitter(...areas.ttdi,             80, 0.018, 0.90),
-          ...jitter(...areas.mont_kiara,       75, 0.022, 0.88),
-          ...jitter(...areas.klcc,             70, 0.022, 0.85),
-          ...jitter(...areas.hartamas,         65, 0.020, 0.82),
-          ...jitter(...areas.desa_park,        60, 0.018, 0.78),
-          ...jitter(...areas.pj_damansara,     55, 0.022, 0.75),
-          ...jitter(...areas.mid_valley,       50, 0.015, 0.72),
-          ...jitter(...areas.subang_jaya,      45, 0.025, 0.68),
-          ...jitter(...areas.bangsar_south,    40, 0.020, 0.65),
-          ...jitter(...areas.bukit_jalil,      35, 0.022, 0.60),
-          ...jitter(...areas.pandan_indah,     30, 0.022, 0.55),
-          ...jitter(...areas.ampang,           30, 0.025, 0.52),
-          // Gaps
-          ...jitter(...areas.kepong,           12, 0.030, 0.22),
-          ...jitter(...areas.setapak,          10, 0.025, 0.18),
-          ...jitter(...areas.chow_kit,         15, 0.015, 0.25),
-          ...jitter(...areas.segambut,          8, 0.020, 0.15),
-          ...jitter(...areas.cheras,           10, 0.025, 0.20),
-          ...jitter(...areas.puchong,           8, 0.030, 0.15),
-          ...jitter(...areas.usj,              10, 0.025, 0.18),
-          ...jitter(...areas.sri_petaling,      8, 0.020, 0.15),
-          ...jitter(...areas.seri_kembangan,    5, 0.025, 0.10),
-          ...jitter(...areas.masjid_india,     12, 0.015, 0.22),
-        ],
-
-        // ── Laundry ──────────────────────────────────────────────────────────
-        // Dense in high-density residential / student areas
-        laundry: [
-          ...jitter(...areas.chow_kit,         80, 0.015, 1.00),
-          ...jitter(...areas.wangsa_maju,       75, 0.025, 0.95),
-          ...jitter(...areas.setapak,           70, 0.025, 0.90),
-          ...jitter(...areas.kepong,            65, 0.030, 0.85),
-          ...jitter(...areas.pj_ss2,            60, 0.028, 0.80),
-          ...jitter(...areas.puchong,           55, 0.030, 0.75),
-          ...jitter(...areas.sri_petaling,      50, 0.020, 0.72),
-          ...jitter(...areas.subang_jaya,       50, 0.025, 0.70),
-          ...jitter(...areas.usj,               45, 0.025, 0.68),
-          ...jitter(...areas.cheras,            45, 0.025, 0.65),
-          ...jitter(...areas.ampang,            40, 0.025, 0.62),
-          ...jitter(...areas.brickfields,       40, 0.015, 0.65),
-          ...jitter(...areas.segambut,          35, 0.020, 0.60),
-          ...jitter(...areas.seri_kembangan,    30, 0.025, 0.55),
-          ...jitter(...areas.masjid_india,      30, 0.015, 0.58),
-          ...jitter(...areas.pandan_indah,      30, 0.022, 0.55),
-          // Gaps — upscale areas rely on hotel/concierge laundry
-          ...jitter(...areas.mont_kiara,         6, 0.022, 0.10),
-          ...jitter(...areas.bangsar,            8, 0.020, 0.12),
-          ...jitter(...areas.ttdi,              10, 0.018, 0.18),
-          ...jitter(...areas.hartamas,           5, 0.022, 0.10),
-          ...jitter(...areas.desa_park,          6, 0.018, 0.12),
-          ...jitter(...areas.kl_eco_city,        5, 0.015, 0.10),
-          ...jitter(...areas.bangsar_south,      6, 0.020, 0.12),
-          ...jitter(...areas.pj_damansara,       8, 0.022, 0.15),
-        ],
-
-        // ── Street Food (Mamak / Hawker) ─────────────────────────────────────
-        // Everywhere but thinner in expat / luxury zones
-        mamak: [
-          ...jitter(...areas.chow_kit,         110, 0.015, 1.00),
-          ...jitter(...areas.kepong,            90, 0.030, 0.95),
-          ...jitter(...areas.setapak,           85, 0.025, 0.90),
-          ...jitter(...areas.wangsa_maju,       80, 0.025, 0.88),
-          ...jitter(...areas.pj_ss2,            75, 0.028, 0.85),
-          ...jitter(...areas.bukit_bintang,     65, 0.018, 0.80),
-          ...jitter(...areas.ampang,            60, 0.025, 0.78),
-          ...jitter(...areas.mid_valley,        55, 0.015, 0.75),
-          ...jitter(...areas.brickfields,       60, 0.015, 0.80),
-          ...jitter(...areas.masjid_india,      70, 0.015, 0.88),
-          ...jitter(...areas.cheras,            60, 0.025, 0.75),
-          ...jitter(...areas.segambut,          55, 0.020, 0.72),
-          ...jitter(...areas.subang_jaya,       55, 0.025, 0.70),
-          ...jitter(...areas.puchong,           50, 0.030, 0.68),
-          ...jitter(...areas.bukit_jalil,       45, 0.025, 0.65),
-          ...jitter(...areas.usj,               45, 0.025, 0.62),
-          ...jitter(...areas.sri_petaling,      45, 0.020, 0.65),
-          ...jitter(...areas.seri_kembangan,    35, 0.025, 0.55),
-          ...jitter(...areas.pandan_indah,      40, 0.022, 0.60),
-          // Gaps — low street food in premium residential
-          ...jitter(...areas.mont_kiara,         8, 0.022, 0.12),
-          ...jitter(...areas.bangsar,           12, 0.020, 0.18),
-          ...jitter(...areas.ttdi,              10, 0.018, 0.15),
-          ...jitter(...areas.hartamas,           7, 0.022, 0.12),
-          ...jitter(...areas.desa_park,          6, 0.018, 0.10),
-          ...jitter(...areas.kl_eco_city,        8, 0.015, 0.12),
-          ...jitter(...areas.bangsar_south,      8, 0.020, 0.12),
-          ...jitter(...areas.pj_damansara,      10, 0.022, 0.15),
-        ],
-
-        // ── Clinics ──────────────────────────────────────────────────────────
-        // Good coverage near commercial hubs, gaps in outer residential
-        clinic: [
-          ...jitter(...areas.klcc,              65, 0.022, 0.92),
-          ...jitter(...areas.bukit_bintang,      60, 0.018, 0.88),
-          ...jitter(...areas.mid_valley,         70, 0.015, 1.00),
-          ...jitter(...areas.bangsar,            55, 0.020, 0.85),
-          ...jitter(...areas.pj_ss2,             55, 0.028, 0.80),
-          ...jitter(...areas.wangsa_maju,        50, 0.025, 0.78),
-          ...jitter(...areas.ampang,             50, 0.025, 0.75),
-          ...jitter(...areas.subang_jaya,        50, 0.025, 0.75),
-          ...jitter(...areas.brickfields,        45, 0.015, 0.78),
-          ...jitter(...areas.masjid_india,       45, 0.015, 0.75),
-          ...jitter(...areas.cheras,             45, 0.025, 0.72),
-          ...jitter(...areas.pj_damansara,       40, 0.022, 0.70),
-          ...jitter(...areas.ttdi,               40, 0.018, 0.72),
-          ...jitter(...areas.bangsar_south,      35, 0.020, 0.65),
-          ...jitter(...areas.bukit_jalil,        35, 0.025, 0.62),
-          ...jitter(...areas.pandan_indah,       30, 0.022, 0.58),
-          // Gaps
-          ...jitter(...areas.kepong,             14, 0.030, 0.22),
-          ...jitter(...areas.setapak,            12, 0.025, 0.20),
-          ...jitter(...areas.puchong,            10, 0.030, 0.18),
-          ...jitter(...areas.chow_kit,           15, 0.015, 0.25),
-          ...jitter(...areas.sri_petaling,        8, 0.020, 0.15),
-          ...jitter(...areas.segambut,           10, 0.020, 0.18),
-          ...jitter(...areas.usj,               12, 0.025, 0.20),
-          ...jitter(...areas.seri_kembangan,      8, 0.025, 0.15),
-        ],
-
-        // ── Gyms ─────────────────────────────────────────────────────────────
-        // Concentrated in affluent and young-professional areas
-        gym: [
-          ...jitter(...areas.mont_kiara,         90, 0.022, 1.00),
-          ...jitter(...areas.bangsar,            80, 0.020, 0.95),
-          ...jitter(...areas.klcc,               75, 0.022, 0.92),
-          ...jitter(...areas.bukit_bintang,       70, 0.018, 0.90),
-          ...jitter(...areas.ttdi,               65, 0.018, 0.88),
-          ...jitter(...areas.mid_valley,         60, 0.015, 0.85),
-          ...jitter(...areas.hartamas,            55, 0.022, 0.82),
-          ...jitter(...areas.pj_damansara,        50, 0.022, 0.78),
-          ...jitter(...areas.subang_jaya,         50, 0.025, 0.75),
-          ...jitter(...areas.bangsar_south,       45, 0.020, 0.72),
-          ...jitter(...areas.kl_eco_city,         40, 0.015, 0.70),
-          ...jitter(...areas.bukit_jalil,         40, 0.025, 0.68),
-          ...jitter(...areas.ampang,              35, 0.025, 0.62),
-          ...jitter(...areas.desa_park,           30, 0.018, 0.60),
-          ...jitter(...areas.usj,                 30, 0.025, 0.58),
-          // Gaps
-          ...jitter(...areas.kepong,               7, 0.030, 0.12),
-          ...jitter(...areas.setapak,              6, 0.025, 0.10),
-          ...jitter(...areas.chow_kit,             8, 0.015, 0.14),
-          ...jitter(...areas.puchong,             10, 0.030, 0.18),
-          ...jitter(...areas.wangsa_maju,         12, 0.025, 0.20),
-          ...jitter(...areas.sri_petaling,         6, 0.020, 0.12),
-          ...jitter(...areas.segambut,             5, 0.020, 0.10),
-          ...jitter(...areas.cheras,              10, 0.025, 0.18),
-          ...jitter(...areas.seri_kembangan,       5, 0.025, 0.10),
-          ...jitter(...areas.masjid_india,         6, 0.015, 0.12),
-        ],
-
-        // ── Convenience Stores ───────────────────────────────────────────────
-        // High everywhere in urban core, drops off in outer suburbs
-        convenience: [
-          ...jitter(...areas.klcc,               90, 0.022, 1.00),
-          ...jitter(...areas.bukit_bintang,       85, 0.018, 0.98),
-          ...jitter(...areas.chow_kit,            80, 0.015, 0.95),
-          ...jitter(...areas.wangsa_maju,         70, 0.025, 0.88),
-          ...jitter(...areas.mid_valley,          75, 0.015, 0.90),
-          ...jitter(...areas.setapak,             65, 0.025, 0.82),
-          ...jitter(...areas.kepong,              60, 0.030, 0.80),
-          ...jitter(...areas.pj_ss2,              65, 0.028, 0.85),
-          ...jitter(...areas.ampang,              55, 0.025, 0.78),
-          ...jitter(...areas.brickfields,         55, 0.015, 0.80),
-          ...jitter(...areas.masjid_india,        60, 0.015, 0.82),
-          ...jitter(...areas.subang_jaya,         55, 0.025, 0.75),
-          ...jitter(...areas.cheras,              50, 0.025, 0.72),
-          ...jitter(...areas.segambut,            45, 0.020, 0.68),
-          ...jitter(...areas.bangsar,             45, 0.020, 0.70),
-          ...jitter(...areas.pandan_indah,        45, 0.022, 0.68),
-          ...jitter(...areas.usj,                 40, 0.025, 0.65),
-          ...jitter(...areas.sri_petaling,        40, 0.020, 0.65),
-          ...jitter(...areas.puchong,             45, 0.030, 0.68),
-          ...jitter(...areas.bukit_jalil,         40, 0.025, 0.65),
-          ...jitter(...areas.seri_kembangan,      35, 0.025, 0.58),
-          // Gaps — low density in low-walkability premium suburbs
-          ...jitter(...areas.mont_kiara,          14, 0.022, 0.22),
-          ...jitter(...areas.hartamas,            12, 0.022, 0.20),
-          ...jitter(...areas.desa_park,           10, 0.018, 0.18),
-          ...jitter(...areas.pj_damansara,        12, 0.022, 0.20),
-          ...jitter(...areas.bangsar_south,       10, 0.020, 0.18),
-          ...jitter(...areas.kl_eco_city,         10, 0.015, 0.18),
-        ],
-      };
-
-      // ──────────────────────────────────────────
-      // HEATMAP LAYER MANAGEMENT
-      // ──────────────────────────────────────────
-      let currentLayer = null;
-
-      const layerConfig = {
         house_price: {
-          gradient: {
-            0.2: "#3a0ca3",
-            0.4: "#7209b7",
-            0.6: "#f72585",
-            0.8: "#ff6b35",
-            1.0: "#ff0000",
-          },
-          label: "🏠 House Price Density",
+          name: "House prices",
+          low: "Most affordable",
+          high: "Priciest",
+          dataOnly: true, // no price data ≠ cheap
+          spots: [
+            ["klcc", 100, 0.025, 1.0],
+            ["mont_kiara", 90, 0.03, 0.95],
+            ["bukit_bintang", 75, 0.02, 0.9],
+            ["bangsar", 70, 0.022, 0.88],
+            ["hartamas", 60, 0.022, 0.82],
+            ["kl_eco_city", 55, 0.018, 0.8],
+            ["bangsar_south", 50, 0.02, 0.78],
+            ["ttdi", 55, 0.02, 0.75],
+            ["pj_damansara", 50, 0.022, 0.72],
+            ["desa_park", 45, 0.018, 0.7],
+            ["bukit_jalil", 40, 0.025, 0.65],
+            // Mid tier
+            ["ampang", 45, 0.025, 0.65],
+            ["mid_valley", 40, 0.018, 0.62],
+            ["chow_kit", 35, 0.015, 0.6],
+            ["subang_jaya", 35, 0.028, 0.58],
+            ["wangsa_maju", 30, 0.025, 0.55],
+            ["brickfields", 30, 0.015, 0.55],
+            ["pandan_indah", 25, 0.022, 0.5],
+            // Affordable
+            ["kepong", 20, 0.03, 0.42],
+            ["setapak", 20, 0.025, 0.45],
+            ["segambut", 18, 0.02, 0.4],
+            ["sri_petaling", 15, 0.02, 0.38],
+            ["puchong", 15, 0.03, 0.35],
+            ["cheras", 15, 0.025, 0.38],
+            ["usj", 12, 0.025, 0.33],
+            ["seri_kembangan", 10, 0.025, 0.3],
+          ],
         },
+        // Cafe culture hotspots: BB, Bangsar, TTDI, Mont Kiara, Hartamas
         cafe: {
-          gradient: {
-            0.2: "#001845",
-            0.4: "#023e8a",
-            0.6: "#0077b6",
-            0.8: "#ff8800",
-            1.0: "#e67e22",
-          },
-          label: "☕ Cafe Density",
+          name: "Cafés",
+          spots: [
+            ["bukit_bintang", 100, 0.018, 1.0],
+            ["bangsar", 90, 0.02, 0.95],
+            ["ttdi", 80, 0.018, 0.9],
+            ["mont_kiara", 75, 0.022, 0.88],
+            ["klcc", 70, 0.022, 0.85],
+            ["hartamas", 65, 0.02, 0.82],
+            ["desa_park", 60, 0.018, 0.78],
+            ["pj_damansara", 55, 0.022, 0.75],
+            ["mid_valley", 50, 0.015, 0.72],
+            ["subang_jaya", 45, 0.025, 0.68],
+            ["bangsar_south", 40, 0.02, 0.65],
+            ["bukit_jalil", 35, 0.022, 0.6],
+            ["pandan_indah", 30, 0.022, 0.55],
+            ["ampang", 30, 0.025, 0.52],
+            // Gaps
+            ["kepong", 12, 0.03, 0.22],
+            ["setapak", 10, 0.025, 0.18],
+            ["chow_kit", 15, 0.015, 0.25],
+            ["segambut", 8, 0.02, 0.15],
+            ["cheras", 10, 0.025, 0.2],
+            ["puchong", 8, 0.03, 0.15],
+            ["usj", 10, 0.025, 0.18],
+            ["sri_petaling", 8, 0.02, 0.15],
+            ["seri_kembangan", 5, 0.025, 0.1],
+            ["masjid_india", 12, 0.015, 0.22],
+          ],
         },
+        // Dense in high-density residential / student areas
         laundry: {
-          gradient: {
-            0.2: "#001d3d",
-            0.4: "#003566",
-            0.6: "#0077b6",
-            0.8: "#00b4d8",
-            1.0: "#90e0ef",
-          },
-          label: "👕 Laundry Density",
+          name: "Laundry",
+          spots: [
+            ["chow_kit", 80, 0.015, 1.0],
+            ["wangsa_maju", 75, 0.025, 0.95],
+            ["setapak", 70, 0.025, 0.9],
+            ["kepong", 65, 0.03, 0.85],
+            ["pj_ss2", 60, 0.028, 0.8],
+            ["puchong", 55, 0.03, 0.75],
+            ["sri_petaling", 50, 0.02, 0.72],
+            ["subang_jaya", 50, 0.025, 0.7],
+            ["usj", 45, 0.025, 0.68],
+            ["cheras", 45, 0.025, 0.65],
+            ["ampang", 40, 0.025, 0.62],
+            ["brickfields", 40, 0.015, 0.65],
+            ["segambut", 35, 0.02, 0.6],
+            ["seri_kembangan", 30, 0.025, 0.55],
+            ["masjid_india", 30, 0.015, 0.58],
+            ["pandan_indah", 30, 0.022, 0.55],
+            // Gaps — upscale areas rely on hotel/concierge laundry
+            ["mont_kiara", 6, 0.022, 0.1],
+            ["bangsar", 8, 0.02, 0.12],
+            ["ttdi", 10, 0.018, 0.18],
+            ["hartamas", 5, 0.022, 0.1],
+            ["desa_park", 6, 0.018, 0.12],
+            ["kl_eco_city", 5, 0.015, 0.1],
+            ["bangsar_south", 6, 0.02, 0.12],
+            ["pj_damansara", 8, 0.022, 0.15],
+          ],
         },
+        // Mamak / hawker: everywhere but thinner in expat / luxury zones
         mamak: {
-          gradient: {
-            0.2: "#1b4332",
-            0.4: "#2d6a4f",
-            0.6: "#52b788",
-            0.8: "#95d5b2",
-            1.0: "#2ecc71",
-          },
-          label: "🍜 Mamak Density",
+          name: "Street food",
+          spots: [
+            ["chow_kit", 110, 0.015, 1.0],
+            ["kepong", 90, 0.03, 0.95],
+            ["setapak", 85, 0.025, 0.9],
+            ["wangsa_maju", 80, 0.025, 0.88],
+            ["pj_ss2", 75, 0.028, 0.85],
+            ["bukit_bintang", 65, 0.018, 0.8],
+            ["ampang", 60, 0.025, 0.78],
+            ["mid_valley", 55, 0.015, 0.75],
+            ["brickfields", 60, 0.015, 0.8],
+            ["masjid_india", 70, 0.015, 0.88],
+            ["cheras", 60, 0.025, 0.75],
+            ["segambut", 55, 0.02, 0.72],
+            ["subang_jaya", 55, 0.025, 0.7],
+            ["puchong", 50, 0.03, 0.68],
+            ["bukit_jalil", 45, 0.025, 0.65],
+            ["usj", 45, 0.025, 0.62],
+            ["sri_petaling", 45, 0.02, 0.65],
+            ["seri_kembangan", 35, 0.025, 0.55],
+            ["pandan_indah", 40, 0.022, 0.6],
+            // Gaps — low street food in premium residential
+            ["mont_kiara", 8, 0.022, 0.12],
+            ["bangsar", 12, 0.02, 0.18],
+            ["ttdi", 10, 0.018, 0.15],
+            ["hartamas", 7, 0.022, 0.12],
+            ["desa_park", 6, 0.018, 0.1],
+            ["kl_eco_city", 8, 0.015, 0.12],
+            ["bangsar_south", 8, 0.02, 0.12],
+            ["pj_damansara", 10, 0.022, 0.15],
+          ],
         },
+        // Good coverage near commercial hubs, gaps in outer residential
         clinic: {
-          gradient: {
-            0.2: "#10002b",
-            0.4: "#3c096c",
-            0.6: "#7b2d8b",
-            0.8: "#c77dff",
-            1.0: "#9b59b6",
-          },
-          label: "🏥 Clinic Density",
+          name: "Clinics",
+          spots: [
+            ["klcc", 65, 0.022, 0.92],
+            ["bukit_bintang", 60, 0.018, 0.88],
+            ["mid_valley", 70, 0.015, 1.0],
+            ["bangsar", 55, 0.02, 0.85],
+            ["pj_ss2", 55, 0.028, 0.8],
+            ["wangsa_maju", 50, 0.025, 0.78],
+            ["ampang", 50, 0.025, 0.75],
+            ["subang_jaya", 50, 0.025, 0.75],
+            ["brickfields", 45, 0.015, 0.78],
+            ["masjid_india", 45, 0.015, 0.75],
+            ["cheras", 45, 0.025, 0.72],
+            ["pj_damansara", 40, 0.022, 0.7],
+            ["ttdi", 40, 0.018, 0.72],
+            ["bangsar_south", 35, 0.02, 0.65],
+            ["bukit_jalil", 35, 0.025, 0.62],
+            ["pandan_indah", 30, 0.022, 0.58],
+            // Gaps
+            ["kepong", 14, 0.03, 0.22],
+            ["setapak", 12, 0.025, 0.2],
+            ["puchong", 10, 0.03, 0.18],
+            ["chow_kit", 15, 0.015, 0.25],
+            ["sri_petaling", 8, 0.02, 0.15],
+            ["segambut", 10, 0.02, 0.18],
+            ["usj", 12, 0.025, 0.2],
+            ["seri_kembangan", 8, 0.025, 0.15],
+          ],
         },
+        // Concentrated in affluent and young-professional areas
         gym: {
-          gradient: {
-            0.2: "#7f4f24",
-            0.4: "#b6811a",
-            0.6: "#e9c46a",
-            0.8: "#f4a261",
-            1.0: "#f39c12",
-          },
-          label: "💪 Gym Density",
+          name: "Gyms",
+          spots: [
+            ["mont_kiara", 90, 0.022, 1.0],
+            ["bangsar", 80, 0.02, 0.95],
+            ["klcc", 75, 0.022, 0.92],
+            ["bukit_bintang", 70, 0.018, 0.9],
+            ["ttdi", 65, 0.018, 0.88],
+            ["mid_valley", 60, 0.015, 0.85],
+            ["hartamas", 55, 0.022, 0.82],
+            ["pj_damansara", 50, 0.022, 0.78],
+            ["subang_jaya", 50, 0.025, 0.75],
+            ["bangsar_south", 45, 0.02, 0.72],
+            ["kl_eco_city", 40, 0.015, 0.7],
+            ["bukit_jalil", 40, 0.025, 0.68],
+            ["ampang", 35, 0.025, 0.62],
+            ["desa_park", 30, 0.018, 0.6],
+            ["usj", 30, 0.025, 0.58],
+            // Gaps
+            ["kepong", 7, 0.03, 0.12],
+            ["setapak", 6, 0.025, 0.1],
+            ["chow_kit", 8, 0.015, 0.14],
+            ["puchong", 10, 0.03, 0.18],
+            ["wangsa_maju", 12, 0.025, 0.2],
+            ["sri_petaling", 6, 0.02, 0.12],
+            ["segambut", 5, 0.02, 0.1],
+            ["cheras", 10, 0.025, 0.18],
+            ["seri_kembangan", 5, 0.025, 0.1],
+            ["masjid_india", 6, 0.015, 0.12],
+          ],
         },
+        // High everywhere in urban core, drops off in outer suburbs
         convenience: {
-          gradient: {
-            0.2: "#004b3a",
-            0.4: "#007f5f",
-            0.6: "#00b87c",
-            0.8: "#1abc9c",
-            1.0: "#20e0a0",
-          },
-          label: "🏪 Convenience Density",
+          name: "Convenience",
+          spots: [
+            ["klcc", 90, 0.022, 1.0],
+            ["bukit_bintang", 85, 0.018, 0.98],
+            ["chow_kit", 80, 0.015, 0.95],
+            ["wangsa_maju", 70, 0.025, 0.88],
+            ["mid_valley", 75, 0.015, 0.9],
+            ["setapak", 65, 0.025, 0.82],
+            ["kepong", 60, 0.03, 0.8],
+            ["pj_ss2", 65, 0.028, 0.85],
+            ["ampang", 55, 0.025, 0.78],
+            ["brickfields", 55, 0.015, 0.8],
+            ["masjid_india", 60, 0.015, 0.82],
+            ["subang_jaya", 55, 0.025, 0.75],
+            ["cheras", 50, 0.025, 0.72],
+            ["segambut", 45, 0.02, 0.68],
+            ["bangsar", 45, 0.02, 0.7],
+            ["pandan_indah", 45, 0.022, 0.68],
+            ["usj", 40, 0.025, 0.65],
+            ["sri_petaling", 40, 0.02, 0.65],
+            ["puchong", 45, 0.03, 0.68],
+            ["bukit_jalil", 40, 0.025, 0.65],
+            ["seri_kembangan", 35, 0.025, 0.58],
+            // Gaps — low density in low-walkability premium suburbs
+            ["mont_kiara", 14, 0.022, 0.22],
+            ["hartamas", 12, 0.022, 0.2],
+            ["desa_park", 10, 0.018, 0.18],
+            ["pj_damansara", 12, 0.022, 0.2],
+            ["bangsar_south", 10, 0.02, 0.18],
+            ["kl_eco_city", 10, 0.015, 0.18],
+          ],
         },
       };
 
-      function showLayer(key) {
-        if (currentLayer) map.removeLayer(currentLayer);
+      // ──────────────────────────────────────────
+      // DATA GENERATOR — clusters of points around area centres
+      // ──────────────────────────────────────────
+      function jitter([lat, lng], n, spread, intensity) {
+        return Array.from({ length: n }, () => [
+          lat + (Math.random() - 0.5) * spread,
+          lng + (Math.random() - 0.5) * spread,
+          intensity * (0.5 + Math.random() * 0.5),
+        ]);
+      }
 
-        const pts = data[key];
-        const cfg = layerConfig[key];
-
-        currentLayer = L.heatLayer(pts, {
-          radius: 35,
-          blur: 25,
-          maxZoom: 15,
-          max: 1.0,
-          gradient: cfg.gradient,
-        }).addTo(map);
-
-        document.getElementById("legend-title").textContent = cfg.label;
+      // Points for the heatmap + a 0–100 density index per area for the listings
+      for (const layer of Object.values(layers)) {
+        layer.points = layer.spots.flatMap(([area, ...args]) =>
+          jitter(areas[area], ...args),
+        );
+        const mass = Object.fromEntries(
+          layer.spots.map(([area, n, , i]) => [area, n * i]),
+        );
+        const max = Math.max(...Object.values(mass));
+        const keys = layer.dataOnly ? Object.keys(mass) : Object.keys(areas);
+        layer.ranked = keys
+          .map((area) => ({
+            area,
+            index: Math.round(((mass[area] || 0) / max) * 100),
+          }))
+          .sort((a, b) => a.index - b.index);
       }
 
       // ──────────────────────────────────────────
-      // FILTER BUTTON WIRING
+      // MAP LAYERS — one heat layer, gap rings, area labels
       // ──────────────────────────────────────────
-      document.querySelectorAll(".filter-btn").forEach((btn) => {
-        btn.addEventListener("click", () => {
-          document
-            .querySelectorAll(".filter-btn")
-            .forEach((b) => b.classList.remove("active"));
-          btn.classList.add("active");
-          showLayer(btn.dataset.key);
+      // Light warm ramp: pale yellow → orange → coral, never dark
+      const HEAT = { 0.2: "#fff1a8", 0.45: "#ffc53d", 0.7: "#ff8a3d", 1.0: "#f4603f" };
+      document.querySelector(".ink-scale").style.background = `linear-gradient(to right, var(--newsprint), ${Object.entries(HEAT)
+        .map(([at, c]) => `${c} ${at * 100}%`)
+        .join(", ")})`;
+      const heat = L.heatLayer([], {
+        radius: 35,
+        blur: 25,
+        maxZoom: 15,
+        max: 1.0,
+        gradient: HEAT,
+      }).addTo(map);
+      const rings = L.layerGroup().addTo(map);
+
+      const pin = (area, className, html) =>
+        L.marker(areas[area], {
+          icon: L.divIcon({ className, html, iconSize: [0, 0] }),
+          interactive: false,
+          keyboard: false,
         });
+
+      for (const [area, [, , label]] of Object.entries(areas)) {
+        pin(area, "area-label", `<span>${label}</span>`).addTo(map);
+      }
+
+      // Hand-drawn grease-pencil loop that overshoots its start
+      const RING_PATH =
+        "M16 32 C 6 16, 60 3, 100 11 C 118 16, 112 38, 72 43 C 36 47, 4 40, 9 26 C 12 16, 34 8, 54 7";
+
+      // ──────────────────────────────────────────
+      // DIRECTORY SHEET
+      // ──────────────────────────────────────────
+      const $ = (id) => document.getElementById(id);
+
+      const entry = ({ area, index }, rank) => `
+        <li><button class="entry" data-area="${area}">
+          ${rank ? `<span class="rank">${rank}</span>` : ""}
+          <span>${areas[area][2]}</span><span class="leader"></span>
+          <span class="val">${index || "none"}</span>
+        </button></li>`;
+
+      function showLayer(key) {
+        const layer = layers[key];
+        const gaps = layer.ranked.slice(0, 5);
+        const crowded = layer.ranked.slice(-3).reverse();
+
+        heat.setLatLngs(layer.points);
+        rings.clearLayers();
+        gaps.forEach(({ area }, i) =>
+          pin(
+            area,
+            "ring",
+            `<svg viewBox="0 0 120 48" style="--i:${i}"><path pathLength="1" d="${RING_PATH}"/></svg><b>${i + 1}</b>`,
+          ).addTo(rings),
+        );
+
+        $("cat-title").textContent = layer.name;
+        $("low-title").textContent = layer.low || "Underserved";
+        $("high-title").textContent = layer.high || "Crowded";
+        $("low-list").innerHTML = gaps.map((g, i) => entry(g, i + 1)).join("");
+        $("high-list").innerHTML = crowded.map((c) => entry(c)).join("");
+
+        document
+          .querySelectorAll(".tab")
+          .forEach((t) =>
+            t.setAttribute("aria-pressed", t.dataset.key === key),
+          );
+      }
+
+      $("tabs").innerHTML = Object.entries(layers)
+        .map(
+          ([key, { name }]) =>
+            `<button class="tab" data-key="${key}" aria-pressed="false">${name}</button>`,
+        )
+        .join("");
+      $("tabs").addEventListener("click", (e) => {
+        const tab = e.target.closest(".tab");
+        if (tab) showLayer(tab.dataset.key);
+      });
+      document.querySelector(".page").addEventListener("click", (e) => {
+        const btn = e.target.closest(".entry");
+        if (btn) map.flyTo(areas[btn.dataset.area], 14, { duration: 0.8 });
       });
 
-      // Initial load
+      // Frame all areas, keeping clear of the thumb-index tabs (desktop) or the sheet (phone)
+      const phone = matchMedia("(max-width: 760px)").matches;
+      map.fitBounds(
+        Object.values(areas).map(([lat, lng]) => [lat, lng]),
+        phone
+          ? { padding: [20, 20], paddingBottomRight: [20, 60] }
+          : { paddingTopLeft: [160, 30], paddingBottomRight: [30, 30] },
+      );
+
       showLayer("house_price");
-
-      // ──────────────────────────────────────────
-      // AREA LABELS (subtle markers)
-      // ──────────────────────────────────────────
-      const areaLabels = [
-        // City core
-        { pos: areas.klcc,           name: "KLCC" },
-        { pos: areas.bukit_bintang,  name: "Bukit Bintang" },
-        { pos: areas.chow_kit,       name: "Chow Kit" },
-        { pos: areas.brickfields,    name: "Brickfields" },
-        { pos: areas.masjid_india,   name: "Masjid India" },
-        // South KL
-        { pos: areas.mid_valley,     name: "Mid Valley" },
-        { pos: areas.bangsar,        name: "Bangsar" },
-        { pos: areas.bangsar_south,  name: "Bangsar South" },
-        { pos: areas.sri_petaling,   name: "Sri Petaling" },
-        // North KL
-        { pos: areas.mont_kiara,     name: "Mont Kiara" },
-        { pos: areas.hartamas,       name: "Hartamas" },
-        { pos: areas.kepong,         name: "Kepong" },
-        { pos: areas.segambut,       name: "Segambut" },
-        // East KL
-        { pos: areas.wangsa_maju,    name: "Wangsa Maju" },
-        { pos: areas.setapak,        name: "Setapak" },
-        { pos: areas.ampang,         name: "Ampang" },
-        { pos: areas.cheras,         name: "Cheras" },
-        { pos: areas.pandan_indah,   name: "Pandan Indah" },
-        // West / PJ
-        { pos: areas.ttdi,           name: "TTDI" },
-        { pos: areas.pj_ss2,         name: "PJ SS2" },
-        { pos: areas.pj_damansara,   name: "PJ Damansara" },
-        { pos: areas.subang_jaya,    name: "Subang Jaya" },
-        { pos: areas.usj,            name: "USJ" },
-        // South
-        { pos: areas.puchong,        name: "Puchong" },
-        { pos: areas.bukit_jalil,    name: "Bukit Jalil" },
-        { pos: areas.seri_kembangan, name: "Seri Kembangan" },
-      ];
-
-      areaLabels.forEach(({ pos, name }) => {
-        L.marker(pos, {
-          icon: L.divIcon({
-            className: "",
-            html: `<div style="
-        color: rgba(255,255,255,0.7);
-        font-size: 11px;
-        font-weight: 600;
-        font-family: 'Segoe UI', sans-serif;
-        white-space: nowrap;
-        text-shadow: 0 0 6px #000, 0 0 12px #000;
-        letter-spacing: 0.5px;
-        pointer-events: none;
-      ">${name}</div>`,
-            iconAnchor: [0, 0],
-          }),
-        }).addTo(map);
-      });
     </script>
   </body>
 </html>
