@@ -6,6 +6,8 @@ One `index.html`. No backend, no build step, no API keys.
 
 > **Hackathon demo:** data is currently simulated around real Kuala Lumpur landmarks. The tool is built to work with any city — swap in your own `[lat, lng, intensity]` points and re-centre the map to use it anywhere.
 
+![GapMap showing house prices across Kuala Lumpur, with the five most affordable areas ringed in red](screenshot.png)
+
 ---
 
 ## What it does
