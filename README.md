@@ -1,36 +1,30 @@
-# 🗺️ KL Facility Heatmap
+# 🗺️ Facility Heatmap
 
-An interactive heatmap for exploring facility density and house price distribution across **Kuala Lumpur** — built as a single-file web app, no backend required.
+**Find the gaps, anywhere.** Flip between seven layers — house prices, cafes, laundry, street food, clinics, gyms, convenience stores — and see which neighbourhoods are packed and which are underserved. The cold spots are the point: they show where a new business or public service could land.
 
-> **Hackathon Demo** — drop `index.html` anywhere and it just works.
+One `index.html`. No backend, no build step, no API keys.
+
+> **Hackathon demo:** data is currently simulated around real Kuala Lumpur landmarks. The tool is built to work with any city — swap in your own `[lat, lng, intensity]` points and re-centre the map to use it anywhere.
 
 ---
 
 ## What it does
 
-Ever wondered where the cafes cluster in KL? Or which neighbourhoods are gym deserts? This tool lets you overlay different facility categories onto a live map and instantly see where things are dense — and where the gaps are.
+Pick a facility category and the map instantly paints a heatmap showing where that thing is concentrated — and more importantly, where it's missing. It's useful for business site selection, urban planning research, or just deciding where to move.
 
 Switch between seven layers with one click:
 
-| Layer | What it shows |
-|-------|--------------|
+| Layer          | What it shows                           |
+| -------------- | --------------------------------------- |
 | 🏠 House Price | Relative property price density by area |
-| ☕ Cafes | Where the coffee shops congregate |
-| 👕 Laundry | Self-service laundry coverage |
-| 🍜 Mamak | The heartbeat of KL — mamak stall density |
-| 🏥 Clinic | GP and clinic availability |
-| 💪 Gym | Fitness centre spread |
-| 🏪 Convenience | 24-hour and convenience store reach |
+| ☕ Cafes       | Where the coffee shops congregate       |
+| 👕 Laundry     | Self-service laundry coverage           |
+| 🍜 Street Food | Local food stall density                |
+| 🏥 Clinic      | GP and clinic availability              |
+| 💪 Gym         | Fitness centre spread                   |
+| 🏪 Convenience | 24-hour and convenience store reach     |
 
-Each layer has its own colour gradient so you can tell them apart at a glance. Red/hot = high density, blue/cool = sparse or missing.
-
----
-
-## Areas covered
-
-The map spans 16 KL neighbourhoods and surrounding areas:
-
-KLCC · Bukit Bintang · Chow Kit · Mid Valley · Bangsar · Mont Kiara · PJ SS2 · Kepong · Wangsa Maju · Ampang · Setapak · Puchong · Sri Petaling · TTDI · Hartamas · Desa Park
+Each layer has its own colour gradient. Red/hot = high density, blue/cool = sparse or missing.
 
 ---
 
@@ -57,11 +51,42 @@ Or host it anywhere static — GitHub Pages, Netlify, Vercel, an S3 bucket. It l
 
 1. Open the page — it defaults to **House Price** density
 2. Click any filter button in the header to switch layers
-3. Use the map normally — scroll to zoom, drag to pan
-4. The legend in the bottom-right tells you what you're looking at
-5. Area name labels are pinned on the map as orientation guides
+3. Scroll to zoom, drag to pan
+4. The legend in the bottom-right tells you what layer you're on
+5. Neighbourhood labels are pinned on the map as orientation guides
 
-The **cool blue zones** on each layer are the interesting ones — they show where a facility type is underrepresented, which could be an opportunity for new businesses or infrastructure investment.
+The **cool blue zones** are the interesting ones — they show where a facility type is underrepresented.
+
+---
+
+## Adapting it to your city
+
+The data lives in a single `data` object inside `index.html`. Each entry is an array of `[lat, lng, intensity]` points — intensity is a value between `0` and `1`.
+
+```js
+// Replace or extend this with your city's coordinates
+const areas = {
+  city_centre: [YOUR_LAT, YOUR_LNG],
+  neighbourhood_a: [YOUR_LAT, YOUR_LNG],
+  // ...
+};
+
+const data = {
+  cafe: [
+    ...jitter(...areas.city_centre, 80, 0.018, 1.0),
+    // or supply raw [lat, lng, intensity] arrays directly
+  ],
+  // ...
+};
+```
+
+Then update the map's initial view to centre on your city:
+
+```js
+const map = L.map('map').setView([YOUR_LAT, YOUR_LNG], 12);
+```
+
+That's it — no other changes needed.
 
 ---
 
@@ -69,18 +94,16 @@ The **cool blue zones** on each layer are the interesting ones — they show whe
 
 - **[Leaflet.js](https://leafletjs.com/)** `v1.9.4` — map rendering
 - **[leaflet-heat](https://github.com/Leaflet/Leaflet.heat)** `v0.2.0` — heatmap layer
-- **[Esri World Dark Gray](https://www.arcgis.com/home/item.html?id=358ec1e175ea41c3bf5c68f0da11ae2b)** — base tile layer (no API key)
+- **[Esri World Dark Gray](https://www.arcgis.com/home/item.html?id=358ec1e175ea41c3bf5c68f0da11ae2b)** — base tile layer (no API key required)
 - Vanilla HTML/CSS/JS — zero dependencies to install
-
-The dark map comes straight from Esri's dark gray basemap, so the heatmap colours render as-is.
 
 ---
 
 ## Data note
 
-The current dataset is **simulated** — points are procedurally generated around real KL landmarks with realistic density distributions. The `jitter()` function scatters N points within a spread radius around each area centre, with a weighted intensity value.
+The bundled dataset is **simulated** — points are procedurally generated around real KL landmarks using a `jitter()` helper that scatters N random points within a spread radius at a given intensity. It's a stand-in for real data; the visual patterns roughly match reality but are not authoritative.
 
-To use real data, replace the `data` object in the `<script>` block with actual lat/lng coordinates in the format `[lat, lng, intensity]`.
+To plug in real data, replace the `data` object entries with actual coordinates sourced from OpenStreetMap, government open data portals, or any spatial dataset.
 
 ---
 
